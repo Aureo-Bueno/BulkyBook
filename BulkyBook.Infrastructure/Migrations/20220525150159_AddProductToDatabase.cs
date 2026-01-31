@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace BulkyBookWeb.Migrations
+namespace BulkyBook.Infrastructure.Migrations
 {
     public partial class AddProductToDatabase : Migration
     {

@@ -1,20 +1,23 @@
-﻿using BulkyBookWeb.Data;
-using BulkyBookWeb.Models;
+﻿using BulkyBook.Application.Interfaces.Repositories;
+using BulkyBook.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BulkyBookWeb.Controllers
 {
     public class ProductController : Controller
     {
-        private readonly ApplicationDbContext _db;
-        public ProductController(ApplicationDbContext db)
+        private readonly IProductRepository _productRepository;
+        private readonly ILogger<ProductController> _logger;
+        public ProductController(IProductRepository productRepository, ILogger<ProductController> logger)
         {
-            _db = db;
+            _productRepository = productRepository;
+            _logger = logger;
         }
 
         public IActionResult Index()
         {
-            IEnumerable<Product> objProductList = _db.Products;
+            IEnumerable<Product> objProductList = _productRepository.GetAll();
+            _logger.LogInformation("Loaded {Count} products.", objProductList.Count());
             return View(objProductList);
         }
 
@@ -34,15 +37,18 @@ namespace BulkyBookWeb.Controllers
             if (obj.Name == obj.Value.ToString())
             {
                 ModelState.AddModelError("CustomError", "The Value cannot exactly match the Name.");
+                _logger.LogWarning("Product validation failed: Name matches Value.");
             }
             if (ModelState.IsValid)
             {
-                _db.Products.Add(obj);
-                _db.SaveChanges();
+                _productRepository.Add(obj);
+                _productRepository.Save();
+                _logger.LogInformation("Product created: {Name}.", obj.Name);
                 TempData["success"] = "Product created successfully";
                 return RedirectToAction("Index");
 
             }
+            _logger.LogWarning("Product creation failed due to validation errors.");
             return View(obj);
         }
 
@@ -52,14 +58,14 @@ namespace BulkyBookWeb.Controllers
         {
             if (id == null || id == 00)
             {
+                _logger.LogWarning("Product edit requested with invalid id.");
                 return NotFound();
             }
-            var productFromDb = _db.Products.Find(id);
-            //var categoryFromDbFirst = _db.Categories.FirstOrDefault(u => u.Id == id);
-            //var categoryFromDbSingle = _db.Categories.SingleOrDefault(u => u.Id == id);
+            var productFromDb = _productRepository.GetById(id.Value);
 
             if (productFromDb == null)
             {
+                _logger.LogWarning("Product not found for edit. Id: {Id}.", id.Value);
                 return NotFound();
             }
 
@@ -75,15 +81,18 @@ namespace BulkyBookWeb.Controllers
             if (obj.Name == obj.Value.ToString())
             {
                 ModelState.AddModelError("CustomError", "The Value cannot exactly match the Name.");
+                _logger.LogWarning("Product validation failed on edit: Name matches Value. Id: {Id}.", obj.Id);
             }
             if (ModelState.IsValid)
             {
-                _db.Products.Update(obj);
-                _db.SaveChanges();
+                _productRepository.Update(obj);
+                _productRepository.Save();
+                _logger.LogInformation("Product updated. Id: {Id}.", obj.Id);
                 TempData["success"] = "Product updated successfully";
                 return RedirectToAction("Index");
 
             }
+            _logger.LogWarning("Product update failed due to validation errors. Id: {Id}.", obj.Id);
             return View(obj);
         }
 
@@ -92,14 +101,14 @@ namespace BulkyBookWeb.Controllers
         {
             if (id == null || id == 00)
             {
+                _logger.LogWarning("Product delete requested with invalid id.");
                 return NotFound();
             }
-            var productFromDb = _db.Products.Find(id);
-            //var categoryFromDbFirst = _db.Categories.FirstOrDefault(u => u.Id == id);
-            //var categoryFromDbSingle = _db.Categories.SingleOrDefault(u => u.Id == id);
+            var productFromDb = _productRepository.GetById(id.Value);
 
             if (productFromDb == null)
             {
+                _logger.LogWarning("Product not found for delete. Id: {Id}.", id.Value);
                 return NotFound();
             }
 
@@ -112,14 +121,22 @@ namespace BulkyBookWeb.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult DeletePOST(int? id)
         {
-            var obj = _db.Products.Find(id);
-            if (obj == null)
+            if (id == null || id == 00)
             {
+                _logger.LogWarning("Product delete POST requested with invalid id.");
                 return NotFound();
             }
 
-            _db.Products.Remove(obj);
-            _db.SaveChanges();
+            var obj = _productRepository.GetById(id.Value);
+            if (obj == null)
+            {
+                _logger.LogWarning("Product not found for delete POST. Id: {Id}.", id.Value);
+                return NotFound();
+            }
+
+            _productRepository.Remove(obj);
+            _productRepository.Save();
+            _logger.LogInformation("Product deleted. Id: {Id}.", id.Value);
             TempData["success"] = "Product deleted successfully";
             return RedirectToAction("Index");
 

@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_password123!"
+    ports:
+      - "1433:1433"
+    volumes:
+      - bulkybook_sql:/var/opt/mssql
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Server=db;Database=Bulky;User Id=sa;Password=Your_password123!;TrustServerCertificate=True;"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  bulkybook_sql:
